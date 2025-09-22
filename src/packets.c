@@ -415,13 +415,13 @@ int sc_chunkDataAndUpdateLight (int client_fd, int _x, int _z) {
   // block light data.
   for (int i = 0; i < block_changes_count; i ++) {
     #ifdef ALLOW_CHESTS
-      if (block_changes[i].block != B_torch && block_changes[i].block != B_chest) continue;
+      if (block_changes.block[i] != B_torch && block_changes_block[i] != B_chest) continue;
     #else
-      if (block_changes[i].block != B_torch) continue;
+      if (block_changes.block[i] != B_torch) continue;
     #endif
-    if (block_changes[i].x < x || block_changes[i].x >= x + 16) continue;
-    if (block_changes[i].z < z || block_changes[i].z >= z + 16) continue;
-    sc_blockUpdate(client_fd, block_changes[i].x, block_changes[i].y, block_changes[i].z, block_changes[i].block);
+    if (block_changes.x[i] < x || block_changes.x[i] >= x + 16) continue;
+    if (block_changes.z[i] < z || block_changes.z[i] >= z + 16) continue;
+    sc_blockUpdate(client_fd, block_changes.x[i], block_changes.y[i], block_changes.z[i], block_changes.block[i]);
   }
 
   return 0;
@@ -1197,8 +1197,21 @@ int cs_chat (int client_fd) {
     // Send command guide
     const char help_msg[] = "§7Commands:\n"
     "  !msg <player> <message> - Send a private message\n"
+    "  !kit - (cheat) Obtain a kit of items for easy testing\n"
     "  !help - Show this help message";
     sc_systemChat(client_fd, (char *)help_msg, (uint16_t)sizeof(help_msg) - 1);
+    goto cleanup;
+  }
+
+  if (!strncmp((char *)recv_buffer, "!give", 5)) {
+    givePlayerItem(player, I_stone_sword, 1);
+    givePlayerItem(player, I_stone_pickaxe, 1);
+    givePlayerItem(player, I_stone_shovel, 1);
+    givePlayerItem(player, I_stone_axe, 1);
+    givePlayerItem(player, I_cobblestone, 64);
+    givePlayerItem(player, I_oak_log, 64);
+    const char give_msg[] = "Items given";
+    sc_systemChat(client_fd, (char *)give_msg, (uint16_t)sizeof(give_msg) - 1);
     goto cleanup;
   }
 

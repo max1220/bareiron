@@ -132,7 +132,8 @@
 // Chests take up 15 block change slots each, require additional checks,
 // and use some terrible memory hacks to function. On some platforms, this
 // could cause bad performance or even crashes during gameplay.
-#define ALLOW_CHESTS
+//#define ALLOW_CHESTS
+// TODO: Not yet supported with flattened block_changes
 
 // If defined, enables flight for all players. As a side-effect, allows
 // players to sprint when starving.
@@ -189,11 +190,12 @@ extern uint8_t motd_len;
 extern uint16_t client_count;
 
 typedef struct {
-  short x;
-  short z;
-  uint8_t y;
-  uint8_t block;
-} BlockChange;
+  short x[MAX_BLOCK_CHANGES];
+  short z[MAX_BLOCK_CHANGES];
+  uint8_t y[MAX_BLOCK_CHANGES];
+  uint8_t block[MAX_BLOCK_CHANGES];
+} BlockChanges;
+
 
 #pragma pack(push, 1)
 
@@ -264,7 +266,7 @@ typedef struct {
   union EntityDataValue value;
 } EntityData;
 
-extern BlockChange block_changes[MAX_BLOCK_CHANGES];
+extern BlockChanges block_changes;
 extern int block_changes_count;
 
 extern PlayerData player_data[MAX_PLAYERS];

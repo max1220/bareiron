@@ -462,25 +462,25 @@ uint8_t buildChunkSection (int cx, int cy, int cz) {
   // but it's better to apply changes in one run rather than in individual
   // runs per block, as this is more expensive than terrain generation.
   for (int i = 0; i < block_changes_count; i ++) {
-    if (block_changes[i].block == 0xFF) continue;
+    if (block_changes.block[i] == 0xFF) continue;
     // Skip blocks that behave better when sent using a block update
-    if (block_changes[i].block == B_torch) continue;
+    if (block_changes.block[i] == B_torch) continue;
     #ifdef ALLOW_CHESTS
-      if (block_changes[i].block == B_chest) continue;
+      if (block_changes.block[i] == B_chest) continue;
     #endif
     if ( // Check if block is within this chunk section
-      block_changes[i].x >= cx && block_changes[i].x < cx + 16 &&
-      block_changes[i].y >= cy && block_changes[i].y < cy + 16 &&
-      block_changes[i].z >= cz && block_changes[i].z < cz + 16
+      block_changes.x[i] >= cx && block_changes.x[i] < cx + 16 &&
+      block_changes.y[i] >= cy && block_changes.y[i] < cy + 16 &&
+      block_changes.z[i] >= cz && block_changes.z[i] < cz + 16
     ) {
-      int dx = block_changes[i].x - cx;
-      int dy = block_changes[i].y - cy;
-      int dz = block_changes[i].z - cz;
+      int dx = block_changes.x[i] - cx;
+      int dy = block_changes.y[i] - cy;
+      int dz = block_changes.z[i] - cz;
       // Same 8-block sequence reversal as before, this time 10x dirtier
       // because we're working with specific indexes.
       unsigned address = (unsigned)(dx + (dz << 4) + (dy << 8));
       unsigned index = (address & ~7u) | (7u - (address & 7u));
-      chunk_section[index] = block_changes[i].block;
+      chunk_section[index] = block_changes.block[i];
     }
   }
 

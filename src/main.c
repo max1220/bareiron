@@ -517,7 +517,7 @@ int main () {
 
   // Initialize block changes entries as unallocated
   for (int i = 0; i < MAX_BLOCK_CHANGES; i ++) {
-    block_changes[i].block = 0xFF;
+    block_changes.block[i] = 0xFF;
   }
 
   // Start the disk/flash serializer (if applicable)
@@ -660,7 +660,10 @@ int main () {
     if (recv_buffer[0] == 0xBE && recv_buffer[1] == 0xEF && getClientState(client_fd) == STATE_NONE) {
       // Send block changes and player data back to back
       // The client is expected to know (or calculate) the size of these buffers
-      send_all(client_fd, block_changes, sizeof(block_changes));
+      send_all(client_fd, block_changes.x, sizeof(block_changes.x));
+      send_all(client_fd, block_changes.z, sizeof(block_changes.z));
+      send_all(client_fd, block_changes.y, sizeof(block_changes.y));
+      send_all(client_fd, block_changes.block, sizeof(block_changes.block));
       send_all(client_fd, player_data, sizeof(player_data));
       // Flush the socket and receive everything left on the wire
       shutdown(client_fd, SHUT_WR);
@@ -674,12 +677,15 @@ int main () {
       // Consume 0xFEED bytes (previous read was just a peek)
       recv_all(client_fd, recv_buffer, 2, false);
       // Write full buffers straight into memory
-      recv_all(client_fd, block_changes, sizeof(block_changes), false);
+      recv_all(client_fd, block_changes.x, sizeof(block_changes.x), false);
+      recv_all(client_fd, block_changes.z, sizeof(block_changes.z), false);
+      recv_all(client_fd, block_changes.y, sizeof(block_changes.y), false);
+      recv_all(client_fd, block_changes.block, sizeof(block_changes.block), false);
       recv_all(client_fd, player_data, sizeof(player_data), false);
       // Recover block_changes_count
       for (int i = 0; i < MAX_BLOCK_CHANGES; i ++) {
-        if (block_changes[i].block == 0xFF) continue;
-        if (block_changes[i].block == B_chest) i += 14;
+        if (block_changes.block[i] == 0xFF) continue;
+        if (block_changes.block[i] == B_chest) i += 14;
         if (i >= block_changes_count) block_changes_count = i + 1;
       }
       // Update data on disk

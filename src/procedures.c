@@ -467,15 +467,15 @@ void broadcastMobMetadata (int client_fd, int entity_id) {
 
 uint8_t getBlockChange (short x, uint8_t y, short z) {
   for (int i = 0; i < block_changes_count; i ++) {
-    if (block_changes[i].block == 0xFF) continue;
+    if (block_changes.block[i] == 0xFF) continue;
     if (
-      block_changes[i].x == x &&
-      block_changes[i].y == y &&
-      block_changes[i].z == z
-    ) return block_changes[i].block;
+      block_changes.x[i] == x &&
+      block_changes.y[i] == y &&
+      block_changes.z[i] == z
+    ) return block_changes.block[i];
     #ifdef ALLOW_CHESTS
       // Skip chest contents
-      if (block_changes[i].block == B_chest) i += 14;
+      if (block_changes.block[i] == B_chest) i += 14;
     #endif
   }
   return 0xFF;
@@ -530,28 +530,28 @@ uint8_t makeBlockChange (short x, uint8_t y, short z, uint8_t block) {
   // Prioritize replacing entries with matching coordinates
   // This prevents having conflicting entries for one set of coordinates
   for (int i = 0; i < block_changes_count; i ++) {
-    if (block_changes[i].block == 0xFF) {
+    if (block_changes.block[i] == 0xFF) {
       if (first_gap == block_changes_count) first_gap = i;
       continue;
     }
     if (
-      block_changes[i].x == x &&
-      block_changes[i].y == y &&
-      block_changes[i].z == z
+      block_changes.x[i] == x &&
+      block_changes.y[i] == y &&
+      block_changes.z[i] == z
     ) {
       #ifdef ALLOW_CHESTS
       // When replacing chests, clear following 14 entries too (item data)
-      if (block_changes[i].block == B_chest) {
-        for (int j = 1; j < 15; j ++) block_changes[i + j].block = 0xFF;
+      if (block_changes.block[i] == B_chest) {
+        for (int j = 1; j < 15; j ++) block_changes.block[i + j] = 0xFF;
       }
       #endif
-      if (is_base_block) block_changes[i].block = 0xFF;
+      if (is_base_block) block_changes.block[i] = 0xFF;
       else {
         #ifdef ALLOW_CHESTS
         // When placing chests, just unallocate the target block and fall
         // through to the chest-specific routine below.
         if (block == B_chest) {
-          block_changes[i].block = 0xFF;
+          block_changes.block[i] = 0xFF;
           if (first_gap > i) first_gap = i;
           #ifndef DISK_SYNC_BLOCKS_ON_INTERVAL
           writeBlockChangesToDisk(i, i);
@@ -559,7 +559,7 @@ uint8_t makeBlockChange (short x, uint8_t y, short z, uint8_t block) {
           break;
         }
         #endif
-        block_changes[i].block = block;
+        block_changes.block[i] = block;
       }
       #ifndef DISK_SYNC_BLOCKS_ON_INTERVAL
       writeBlockChangesToDisk(i, i);
@@ -579,22 +579,22 @@ uint8_t makeBlockChange (short x, uint8_t y, short z, uint8_t block) {
     // which naturally appends the chest to the end if a gap isn't found.
     int last_real_entry = first_gap - 1;
     for (int i = first_gap; i <= block_changes_count + 15; i ++) {
-      if (block_changes[i].block != 0xFF) {
+      if (block_changes.block[i] != 0xFF) {
         last_real_entry = i;
         continue;
       }
       if (i - last_real_entry != 15) continue;
       // A wide enough gap has been found, assign the chest
-      block_changes[last_real_entry + 1].x = x;
-      block_changes[last_real_entry + 1].y = y;
-      block_changes[last_real_entry + 1].z = z;
-      block_changes[last_real_entry + 1].block = block;
+      block_changes.x[last_real_entry + 1] = x;
+      block_changes.y[last_real_entry + 1] = y;
+      block_changes.z[last_real_entry + 1] = z;
+      block_changes.block[last_real_entry + 1] = block;
       // Zero out the following 14 entries for item data
       for (int i = 2; i <= 15; i ++) {
-        block_changes[last_real_entry + i].x = 0;
-        block_changes[last_real_entry + i].y = 0;
-        block_changes[last_real_entry + i].z = 0;
-        block_changes[last_real_entry + i].block = 0;
+        block_changes.x[last_real_entry + i] = 0;
+        block_changes.y[last_real_entry + i] = 0;
+        block_changes.z[last_real_entry + i] = 0;
+        block_changes.block[last_real_entry + i] = 0;
       }
       // Extend future search range if necessary
       if (i >= block_changes_count) {
@@ -619,10 +619,10 @@ uint8_t makeBlockChange (short x, uint8_t y, short z, uint8_t block) {
   }
 
   // Fall back to storing the change at the first possible gap
-  block_changes[first_gap].x = x;
-  block_changes[first_gap].y = y;
-  block_changes[first_gap].z = z;
-  block_changes[first_gap].block = block;
+  block_changes.x[first_gap] = x;
+  block_changes.y[first_gap] = y;
+  block_changes.z[first_gap] = z;
+  block_changes.block[first_gap] = block;
   // Write change to disk (if applicable)
   #ifndef DISK_SYNC_BLOCKS_ON_INTERVAL
   writeBlockChangesToDisk(first_gap, first_gap);
@@ -1252,9 +1252,10 @@ void handlePlayerUseItem (PlayerData *player, short x, short y, short z, uint8_t
       // Get a pointer to the entry following this chest in block_changes
       uint8_t *storage_ptr = NULL;
       for (int i = 0; i < block_changes_count; i ++) {
-        if (block_changes[i].block != B_chest) continue;
-        if (block_changes[i].x != x || block_changes[i].y != y || block_changes[i].z != z) continue;
-        storage_ptr = (uint8_t *)(&block_changes[i + 1]);
+        if (block_changes.block[i] != B_chest) continue;
+        if (block_changes.x[i] != x || block_changes.y[i] != y || block_changes.z[i] != z) continue;
+        // TODO: Does probably require more of a rewrite with the separate block_changes arrays
+        storage_ptr = (uint8_t *)(&block_changes.block[i + 1]);
         break;
       }
       if (storage_ptr == NULL) return;
@@ -1269,6 +1270,7 @@ void handlePlayerUseItem (PlayerData *player, short x, short y, short z, uint8_t
       // Load the slots of the chest from the block_changes array.
       // This is a similarly dubious memcpy hack, but at least we're not
       // mixing data types? Kind of?
+      // TODO: separate block_changes arrays requires further changes!
       for (int i = 0; i < 27; i ++) {
         uint16_t item;
         uint8_t count;

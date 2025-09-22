@@ -42,7 +42,7 @@ int initSerializer () {
   if (file) {
 
     // Read block changes from the start of the file directly into memory
-    size_t read = fread(block_changes, 1, sizeof(block_changes), file);
+    size_t read = fread(&block_changes, 1, sizeof(block_changes), file);
     if (read != sizeof(block_changes)) {
       printf("Read %u bytes from \"world.bin\", expected %u (block changes). Aborting.\n", read, sizeof(block_changes));
       fclose(file);
@@ -50,8 +50,8 @@ int initSerializer () {
     }
     // Find the index of the last occupied entry to recover block_changes_count
     for (int i = 0; i < MAX_BLOCK_CHANGES; i ++) {
-      if (block_changes[i].block == 0xFF) continue;
-      if (block_changes[i].block == B_chest) i += 14;
+      if (block_changes.block[i] == 0xFF) continue;
+      if (block_changes.block[i] == B_chest) i += 14;
       if (i >= block_changes_count) block_changes_count = i + 1;
     }
     // Seek past block changes to start reading player data
@@ -82,7 +82,7 @@ int initSerializer () {
     }
     // Write initial block changes array
     // This should be done after all entries have had `block` set to 0xFF
-    size_t written = fwrite(block_changes, 1, sizeof(block_changes), file);
+    size_t written = fwrite(&block_changes, 1, sizeof(block_changes), file);
     if (written != sizeof(block_changes)) {
       perror(
         "Failed to write initial block data to \"world.bin\".\n"
@@ -127,18 +127,14 @@ void writeBlockChangesToDisk (int from, int to) {
   }
 
   for (int i = from; i <= to; i ++) {
-    // Seek to relevant offset in file
-    if (fseek(file, i * sizeof(BlockChange), SEEK_SET) != 0) {
-      fclose(file);
-      perror("Failed to seek in \"world.bin\". Block updates have been dropped.");
-      return;
-    }
-    // Write block change entry to file
-    if (fwrite(&block_changes[i], 1, sizeof(BlockChange), file) != sizeof(BlockChange)) {
-      fclose(file);
-      perror("Failed to write to \"world.bin\". Block updates have been dropped.");
-      return;
-    }
+    fseek(file, i * sizeof(short), SEEK_SET);
+    fwrite(&block_changes.x[i], 1, sizeof(short), file);
+    fseek(file, sizeof(block_changes.x) + i * sizeof(short), SEEK_SET);
+    fwrite(&block_changes.z[i], 1, sizeof(short), file);
+    fseek(file, sizeof(block_changes.x) + sizeof(block_changes.z) + i * sizeof(short), SEEK_SET);
+    fwrite(&block_changes.y[i], 1, sizeof(uint8_t), file);
+    fseek(file, sizeof(block_changes.x) + sizeof(block_changes.z) + sizeof(block_changes.y) + i * sizeof(short), SEEK_SET);
+    fwrite(&block_changes.z[i], 1, sizeof(uint8_t), file);
   }
 
   fclose(file);
