@@ -72,7 +72,7 @@
 
 // How many player-made block changes to allow
 // Determines the fixed amount of memory allocated to blocks
-#define MAX_BLOCK_CHANGES 20000
+#define MAX_BLOCK_CHANGES 16384
 
 // If defined, writes and reads world data to/from disk (or flash).
 // This is a synchronous operation, and can cause performance issues if
@@ -194,6 +194,11 @@ typedef struct {
   short z[MAX_BLOCK_CHANGES];
   uint8_t y[MAX_BLOCK_CHANGES];
   uint8_t block[MAX_BLOCK_CHANGES];
+  
+  uint8_t x_rle[MAX_BLOCK_CHANGES/2];
+  uint8_t z_rle[MAX_BLOCK_CHANGES/2];
+  uint8_t y_rle[MAX_BLOCK_CHANGES/2];
+  uint8_t block_rle[MAX_BLOCK_CHANGES/2];
 } BlockChanges;
 
 

@@ -465,6 +465,70 @@ void broadcastMobMetadata (int client_fd, int entity_id) {
   free(metadata);
 }
 
+/*
+Data: ABCD
+Rep : 0123
+Res : ABBCCCDDDD
+*/
+
+short RLEgetBlockChangeX(int res_i, int* arr_i) {
+  int cur_res_i = 0;
+  for (;*arr_i < block_changes_count; (*arr_i)++) {
+    int next_res_i = cur_res_i + block_changes.x_rle[*arr_i];
+    if ((cur_res_i>=res_i) && (next_res_i < res_i)) {
+      return block_changes.x[*arr_i];
+    }
+    cur_res_i = next_res_i;
+  }
+  return 0xffff;
+}
+short RLEgetBlockChangeZ(int res_i, int* arr_i);
+uint8_t RLEgetBlockChangeY(int res_i, int* arr_i);
+uint8_t RLEgetBlockChangeBlock(int res_i, int* arr_i);
+
+/*
+ARR : ABCD
+RLE : 0123
+RES : ABBCCCDDDD
+*/
+uint8_t RLEgetBlockChange (short x, uint8_t y, short z) {
+  // note index in decompressed result
+  int x_res_i = 0; int z_res_i = 0; int y_res_i = 0; int b_res_i = 0;
+  // iterate over coordinate matches in the compressed data, noting the decompressed result indices
+  for (int xi=0; xi<block_changes_count; xi++) {
+    int next_x_res_i = x_res_i + block_changes.x_rle[xi];
+    if (block_changes.x[xi] == x) {
+      for (int zi=0; zi<block_changes_count; zi++) {
+        int next_z_res_i = z_res_i + block_changes.z_rle[zi];
+        if (block_changes.z[zi] == z) {
+          for (int yi=0; yi<block_changes_count; yi++) {
+            int next_y_res_i = y_res_i + block_changes.y_rle[yi];
+            if (block_changes.y[yi] == y) {
+              // got valid coordinate pair in compressed data
+              for (int bi=0; bi<block_changes_count; bi++) {
+                int next_b_res_i = b_res_i + block_changes.block_rle[bi];
+                // determine if the resulting decompressed ranges in the results overlap
+                int res_i_start = MAX(x_res_i, MAX(z_res_i, MAX(y_res_i, b_res_i)));
+                int res_i_end = MIN(next_x_res_i, MIN(next_z_res_i, MIN(next_y_res_i, next_b_res_i)));
+                if (res_i_start < res_i_end) {
+                  // overlap between all result ranges, so the current compressed values belong to each other
+                  // (they are at the same index/indices in the decompressed result)
+                  
+                }
+                b_res_i = next_b_res_i;
+              }
+            }
+            y_res_i = next_y_res_i;
+          }
+        }
+        z_res_i = next_z_res_i;
+      }
+    }
+    x_res_i = next_x_res_i;
+  }
+  return 0xff;
+}
+
 uint8_t getBlockChange (short x, uint8_t y, short z) {
   for (int i = 0; i < block_changes_count; i ++) {
     if (block_changes.block[i] == 0xFF) continue;
